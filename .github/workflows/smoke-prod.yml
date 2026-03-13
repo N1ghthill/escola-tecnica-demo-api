@@ -1,0 +1,101 @@
+name: Smoke Prod
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/30 * * * *"
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Run production smoke checks
+        run: |
+          set -euo pipefail
+
+          MAX_ATTEMPTS=4
+          RETRY_BACKOFF_BASE_SEC=4
+
+          check_status() {
+            local url="$1"
+            local expected="$2"
+            local attempt=1
+            local body_file
+            body_file="$(mktemp)"
+
+            while (( attempt <= MAX_ATTEMPTS )); do
+              local code
+              code="$(
+                curl -sS \
+                  --connect-timeout 10 \
+                  --max-time 35 \
+                  --retry 2 \
+                  --retry-delay 2 \
+                  --retry-all-errors \
+                  -o "$body_file" \
+                  -w '%{http_code}' \
+                  "$url" || echo 000
+              )"
+              echo "$url -> $code (esperado: $expected, tentativa $attempt/$MAX_ATTEMPTS)"
+
+              if [[ "$code" == "$expected" ]]; then
+                return 0
+              fi
+
+              if [[ "$code" =~ ^(000|408|425|429|500|502|503|504)$ ]] && (( attempt < MAX_ATTEMPTS )); then
+                local sleep_for=$(( RETRY_BACKOFF_BASE_SEC * attempt ))
+                echo "Erro transiente para $url; aguardando ${sleep_for}s para nova tentativa..."
+                sleep "$sleep_for"
+                ((attempt++))
+                continue
+              fi
+
+              echo "Falha em $url"
+              echo "Resposta:"
+              cat "$body_file"
+              exit 1
+            done
+          }
+
+          check_status "https://unitec-api.ruas.cloud/api/health" "200"
+          check_status "https://www.univitoriacursos.com.br/api/health" "200"
+          check_status "https://www.univitoriacursos.com.br/api/courses" "200"
+          check_status "https://www.univitoriacursos.com.br/api/leads?lead_status=novo_lead&limit=1" "401"
+          check_status "https://www.univitoriacursos.com.br/checkout.html" "308"
+
+          payments_body="$(mktemp)"
+          payments_url="https://www.univitoriacursos.com.br/api/payments"
+          payments_attempt=1
+          while (( payments_attempt <= MAX_ATTEMPTS )); do
+            payments_code="$(
+              curl -sS \
+                --connect-timeout 10 \
+                --max-time 35 \
+                --retry 2 \
+                --retry-delay 2 \
+                --retry-all-errors \
+                -o "$payments_body" \
+                -w '%{http_code}' \
+                -X POST "$payments_url" \
+                -H 'Content-Type: application/json' \
+                --data '{"course_slug":"administracao"}' || echo 000
+            )"
+            echo "$payments_url -> $payments_code (esperado: 410, tentativa $payments_attempt/$MAX_ATTEMPTS)"
+
+            if [[ "$payments_code" == "410" ]]; then
+              break
+            fi
+
+            if [[ "$payments_code" =~ ^(000|408|425|429|500|502|503|504)$ ]] && (( payments_attempt < MAX_ATTEMPTS )); then
+              sleep_for=$(( RETRY_BACKOFF_BASE_SEC * payments_attempt ))
+              echo "Erro transiente em $payments_url; aguardando ${sleep_for}s para nova tentativa..."
+              sleep "$sleep_for"
+              ((payments_attempt++))
+              continue
+            fi
+
+            echo "Falha em $payments_url"
+            cat "$payments_body"
+            exit 1
+          done

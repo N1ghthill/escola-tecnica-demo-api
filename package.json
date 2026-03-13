@@ -1,0 +1,27 @@
+{
+  "name": "escola-tecnica-demo-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch server.ts",
+    "start": "tsx server.ts",
+    "start:prod": "tsx server.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "find tests -name '*.test.ts' -print0 | xargs -0 node --import tsx --test",
+    "check": "npm run typecheck && npm run test",
+    "db:setup": "bash scripts/db-setup.sh",
+    "db:apply": "bash scripts/db-apply.sh"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "pg": "^8.19.0",
+    "tsx": "^4.7.1"
+  },
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/pg": "^8.18.0",
+    "typescript": "^5.9.3"
+  }
+}

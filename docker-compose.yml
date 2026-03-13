@@ -1,0 +1,22 @@
+services:
+  db:
+    image: postgres:16
+    container_name: escola-tecnica-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: escola_tecnica
+      POSTGRES_USER: escola_tecnica
+      POSTGRES_PASSWORD: escola_tecnica
+    ports:
+      - "5432:5432"
+    volumes:
+      - escola_tecnica_db_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U escola_tecnica -d escola_tecnica"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  escola_tecnica_db_data:

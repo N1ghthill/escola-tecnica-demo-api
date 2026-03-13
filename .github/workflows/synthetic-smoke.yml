@@ -1,0 +1,98 @@
+name: Synthetic Smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */6 * * *"
+
+jobs:
+  smoke-http:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check critical pages and API contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          MAX_ATTEMPTS=4
+          RETRY_BACKOFF_BASE_SEC=4
+
+          check() {
+            local url="$1"
+            local expected="$2"
+            local attempt=1
+            while (( attempt <= MAX_ATTEMPTS )); do
+              local code
+              code="$(
+                curl -sS \
+                  --connect-timeout 10 \
+                  --max-time 35 \
+                  --retry 2 \
+                  --retry-delay 2 \
+                  --retry-all-errors \
+                  -o /tmp/resp.txt \
+                  -w '%{http_code}' \
+                  "$url" || echo 000
+              )"
+              if [[ "$code" == "$expected" ]]; then
+                echo "OK $code $url (tentativa $attempt/$MAX_ATTEMPTS)"
+                return 0
+              fi
+
+              if [[ "$code" =~ ^(000|408|425|429|500|502|503|504)$ ]] && (( attempt < MAX_ATTEMPTS )); then
+                local sleep_for=$(( RETRY_BACKOFF_BASE_SEC * attempt ))
+                echo "Smoke transiente para $url: got=$code expected=$expected (tentativa $attempt/$MAX_ATTEMPTS). Retentando em ${sleep_for}s..."
+                sleep "$sleep_for"
+                ((attempt++))
+                continue
+              fi
+
+              echo "Smoke failed for $url: got=$code expected=$expected"
+              head -c 400 /tmp/resp.txt || true
+              echo
+              exit 1
+            done
+          }
+
+          check "https://www.univitoriacursos.com.br/" "200"
+          check "https://www.univitoriacursos.com.br/matricula.html" "200"
+          check "https://www.univitoriacursos.com.br/checkout.html" "308"
+          check "https://www.univitoriacursos.com.br/api/health" "200"
+          check "https://www.univitoriacursos.com.br/api/courses" "200"
+          check "https://www.univitoriacursos.com.br/api/leads?lead_status=novo_lead&limit=1" "401"
+
+          payments_url="https://www.univitoriacursos.com.br/api/payments"
+          payments_attempt=1
+          while (( payments_attempt <= MAX_ATTEMPTS )); do
+            payments_code="$(
+              curl -sS \
+                --connect-timeout 10 \
+                --max-time 35 \
+                --retry 2 \
+                --retry-delay 2 \
+                --retry-all-errors \
+                -o /tmp/resp.txt \
+                -w '%{http_code}' \
+                -X POST "$payments_url" \
+                -H 'Content-Type: application/json' \
+                --data '{"course_slug":"administracao"}' || echo 000
+            )"
+            if [[ "$payments_code" == "410" ]]; then
+              echo "OK $payments_code $payments_url (tentativa $payments_attempt/$MAX_ATTEMPTS)"
+              break
+            fi
+
+            if [[ "$payments_code" =~ ^(000|408|425|429|500|502|503|504)$ ]] && (( payments_attempt < MAX_ATTEMPTS )); then
+              sleep_for=$(( RETRY_BACKOFF_BASE_SEC * payments_attempt ))
+              echo "Smoke transiente para $payments_url: got=$payments_code expected=410 (tentativa $payments_attempt/$MAX_ATTEMPTS). Retentando em ${sleep_for}s..."
+              sleep "$sleep_for"
+              ((payments_attempt++))
+              continue
+            fi
+
+            echo "Smoke failed for /api/payments: got=$payments_code expected=410"
+            head -c 400 /tmp/resp.txt || true
+            echo
+            exit 1
+          done
