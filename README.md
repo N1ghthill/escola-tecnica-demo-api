@@ -1,16 +1,34 @@
-# escola-tecnica-demo-api
+# Escola Tecnica Demo API
 
-API Node.js/TypeScript preparada para demonstração pública de um funil educacional.
+Backend em Node.js + TypeScript para um funil educacional demonstrativo com catalogo, captura de leads, intencoes parciais e metricas de funil.
 
-O repositório foi reduzido para apresentação:
+Este repositorio foi preparado como vitrine tecnica: a base operacional original foi sanitizada, os ativos sensiveis foram removidos e o projeto pode rodar em modo demo sem banco nem integracoes externas.
 
-- catálogo de cursos
-- captura de leads
-- captura de intenções parciais
-- métricas de funil
-- modo demo sem banco nem integrações externas
+Repositorio complementar do front:
+- Frontend demo: `https://github.com/N1ghthill/escola-tecnica-demo-front`
 
-Runbooks, artefatos operacionais e referências de infraestrutura real foram removidos desta cópia.
+## O que este projeto demonstra
+
+- Catalogo de cursos com payloads consistentes para paginas publicas.
+- Captura de lead completo com protocolo e handoff para painel interno.
+- Captura de intencoes parciais para abandono e pre-qualificacao.
+- Dashboard de metricas de funil com resumo e series temporais.
+- Autenticacao simples para o painel do matriculador.
+- Modo demo para apresentacao sem dependencias externas.
+
+## Fluxo funcional
+
+```mermaid
+flowchart LR
+    A[Pagina publica] --> B[Catalogo de cursos]
+    B --> C[Pre-matricula]
+    C --> D[POST /api/leads]
+    C --> E[POST /api/lead-intents]
+    D --> F[Painel do matriculador]
+    E --> F
+    A --> G[POST /api/funnel-events]
+    G --> H[GET /api/funnel-metrics]
+```
 
 ## Endpoints principais
 
@@ -25,33 +43,25 @@ Runbooks, artefatos operacionais e referências de infraestrutura real foram rem
 - `GET /api/funnel-metrics`
 - `POST /api/payments`
 
-## Modo demo
+## Rodando localmente
 
-Ative o modo demo para responder com payloads mockados, sem PostgreSQL e sem canais externos:
-
-```bash
-DEMO_MODE=true MATRICULADOR_TOKEN=demo-token npm run dev
-```
-
-Nesse modo, `health`, `courses`, `leads`, `lead-intents`, `funnel-events` e `funnel-metrics`
-respondem com dados locais de demonstração.
-
-## Setup local
+Modo demo, sem PostgreSQL:
 
 ```bash
 npm install
-npm run dev
+DEMO_MODE=true MATRICULADOR_TOKEN=demo-token npm run dev
 ```
 
-Se quiser rodar com banco local em vez de demo:
+Modo local com banco:
 
 ```bash
+npm install
 docker compose up -d db
 npm run db:setup
 npm run dev
 ```
 
-## Variáveis relevantes
+## Variaveis relevantes
 
 - `DEMO_MODE` ou `APP_MODE=demo`
 - `MATRICULADOR_TOKEN` ou `MATRICULADOR_TOKEN_SHA256(_LIST)`
@@ -61,23 +71,27 @@ npm run dev
 - `ENROLLMENT_FLOW_MODE`
 - `ENABLE_ONLINE_PAYMENTS`
 
-## Qualidade
+## Qualidade e testes
 
 ```bash
 npm run check
 ```
 
-O comando executa:
+Esse comando executa typecheck e a suite automatizada do projeto.
 
-- `npm run typecheck`
-- `npm run test`
+## Estrutura
 
-## Observações
+- `api/`: handlers HTTP.
+- `lib/`: regras de negocio, demo mode, seguranca e integracoes.
+- `db/init/`: migracoes SQL para setup local.
+- `tests/`: cobertura de CORS, idempotencia, respostas demo e seguranca.
 
-- `POST /api/payments` permanece desativado por padrão.
-- O `vercel.json` não faz mais proxy para infraestrutura externa.
-- O domínio de demonstração esperado no front é `https://demo.escola-tecnica.example`.
+## Notas de portfolio
 
-## Licença
+- `POST /api/payments` permanece desativado por padrao.
+- O modo demo responde com dados consistentes para exibicao no front e no painel.
+- Esta copia publica nao inclui runbooks, segredos, dominios legados ou infraestrutura operacional.
 
-Repositório proprietario. Veja `LICENSE`.
+## Licenca
+
+Repositorio proprietario. Veja `LICENSE`.
