@@ -1,10 +1,15 @@
 # Escola Tecnica Demo API
 
+[![Demo ao vivo](https://img.shields.io/badge/demo-online-1a7f37?style=flat-square)](https://escola-tecnica-demo-front.vercel.app)
+[![Stack](https://img.shields.io/badge/stack-Node.js%20%7C%20TypeScript%20%7C%20Express-0a7ea4?style=flat-square)](https://github.com/N1ghthill/escola-tecnica-demo-api)
+
 Backend em Node.js + TypeScript para um funil educacional demonstrativo com catalogo, captura de leads, intencoes parciais e metricas de funil.
 
 Este repositorio foi preparado como vitrine tecnica: a base operacional original foi sanitizada, os ativos sensiveis foram removidos e o projeto pode rodar em modo demo sem banco nem integracoes externas.
 
-Repositorio complementar do front:
+## Links rapidos
+
+- Demo ao vivo do fluxo: `https://escola-tecnica-demo-front.vercel.app`
 - Frontend demo: `https://github.com/N1ghthill/escola-tecnica-demo-front`
 
 ## O que este projeto demonstra
