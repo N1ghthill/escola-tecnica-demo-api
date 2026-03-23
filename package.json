@@ -21,7 +21,7 @@
   "license": "UNLICENSED",
   "devDependencies": {
     "@types/express": "^5.0.6",
-    "@types/pg": "^8.18.0",
+    "@types/pg": "^8.20.0",
     "typescript": "^5.9.3"
   }
 }
